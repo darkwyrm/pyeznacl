@@ -82,7 +82,7 @@ class PublicKey (CryptoKey):
 			return RetVal(ErrBadType, 'bytes expected')
 		
 		try:
-			sealedbox = nacl.public.SealedBox(nacl.public.PublicKey(self.public.as_raw()))
+			sealedbox = nacl.public.SealedBox(nacl.public.EncryptionKey(self.public.as_raw()))
 			encrypted_data = sealedbox.encrypt(data, Base85Encoder).decode()
 		except Exception as e:
 			return RetVal().wrap_exception(e)
@@ -165,7 +165,7 @@ class EncryptionPair (CryptoKey):
 			return RetVal(ErrBadType, 'bytes expected')
 		
 		try:
-			sealedbox = nacl.public.SealedBox(nacl.public.PublicKey(self.public.as_raw()))
+			sealedbox = nacl.public.SealedBox(nacl.public.EncryptionKey(self.public.as_raw()))
 			encrypted_data = sealedbox.encrypt(data, Base85Encoder).decode()
 		except Exception as e:
 			return RetVal().wrap_exception(e)
