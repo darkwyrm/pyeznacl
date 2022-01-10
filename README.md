@@ -8,7 +8,7 @@ Working with encryption is hard. PyNaCl made it a *lot* easier, but it's still k
 
 ## Status
 
-The module is in alpha. Although stable in current usage, APIs may break prior to its first release, so caveat emptor. Usage information can be found in the USAGE.md file in this repository.
+The module is stable and ready for production use. Usage information can be found in the USAGE.md file in this repository.
 
 ## Building
 
