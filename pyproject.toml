@@ -15,7 +15,7 @@ authors = [
 keywords = ["nacl","encryption","cryptostring"]
 classifiers = [
 	"License :: OSI Approved :: MIT License",
-	"Development Status :: 3 - Alpha",
+	"Development Status :: 5 - Production/Stable",
 	"Intended Audience :: Developers",
 	"Topic :: Communications"
 ]
