@@ -45,7 +45,7 @@ __secret_key_schema = {
 }
 
 class CryptoKey:
-	'''Defines a generic interface to an Mensago encryption key, which contains more
+	'''Defines a generic interface to a Mensago encryption key, which contains more
 	information than just the key itself'''
 	def __init__(self):
 		self.pubhash = ''
