@@ -33,7 +33,23 @@ print(f"My new public key is {my_public_key}")
 
 The methods `set()`, `set_raw()`, and `is_valid()` are also useful. The module also comes with a bare function `is_cryptostring()` which returns True if a string passed to it is CryptoString-formatted.
 
-## Hashes, Encryption/Decryption, and Signing
+## Encryption and Decryption
+
+The encryption and decryption API is designed to be as simple as possible. This still means, however, that you have to be careful how to apply it. Creating a new encryption key pair and encrypting a section of text with it is a simple as the following:
+
+```python
+from pyeznacl import EncryptionPair
+
+encpair = EncryptionPair()
+status = encpair.encrypt(b'This is some text')
+
+if status.error():
+	print('An error occurred')
+
+print(f"Encrypted data: {status['data']})")
+```
+
+## Hashes and Signing
 
 TODO
 
