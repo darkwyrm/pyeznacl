@@ -105,4 +105,28 @@ Four 256-bit algorithms are provided by the library: BLAKE2B, BLAKE3, SHA2, and 
 
 ## Passwords
 
-TODO
+Like encryption, password handling is often tricky. The `Password` class provides an easy-to-use API for working with passwords. The Argon2id hashing algorithm is used internally by PyNaCl for generating the hashes. Here is a sample usage:
+
+```python
+import sys
+
+from pyeznacl import Password
+
+pwd = Password()
+
+for p in [ 'foobar', 'ALittle1', 'MyS3cretPassw*rd']:
+	status = pwd.set(p)	
+	print(f"'{p}' is a {status['strength']} password")
+
+status = pwd.set('MyS3cretPassw*rd')
+if status.error():
+	print(f"There was an error setting the password: {status.error()}")
+	sys.exit(1)
+
+guess = input('Try to guess the password: ')
+match = pwd.check(guess)
+if match:
+	print('You guessed right!')
+else:
+	print('You guessed wrong. Better luck next time')
+```
