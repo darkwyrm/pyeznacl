@@ -92,6 +92,13 @@ else:
 
 ## Hashes
 
-TODO
+Getting a hash of a piece of data is intended to be as simple as possible. All PyEZNaCl hash functions return a CryptoString-formatted string.
 
+```python
+from pyeznacl import sha256hash, blake2hash
 
+print(blake2hash(b'This is some text'))
+print(sha256hash(b'This is some text'))
+```
+
+Four 256-bit algorithms are provided by the library: BLAKE2B, BLAKE3, SHA2, and SHA3 using the functions `blake2hash()`, `blake3hash()`, `sha256hash()`, and `sha3_256hash()`. `hashfile` is also provided for easy file hashing with large file support.
