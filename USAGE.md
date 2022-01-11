@@ -33,9 +33,13 @@ print(f"My new public key is {my_public_key}")
 
 The methods `set()`, `set_raw()`, and `is_valid()` are also useful. The module also comes with a bare function `is_cryptostring()` which returns True if a string passed to it is CryptoString-formatted.
 
+## Error Handling
+
+Many functions and methods used in this module use the RetVal module. RetVal is essentially a dictionary used for returning multiple values dynamically, easier error checking without using exceptions, and richer error information while debugging.
+
 ## Encryption and Decryption
 
-The encryption and decryption API is designed to be as simple as possible. This still means, however, that you have to be careful how to apply it. Creating a new encryption key pair and encrypting a section of text with it is a simple as the following:
+The encryption and decryption API is designed to be as simple as possible. This still means, however, that you have to be careful how to apply it. Creating a new encryption key pair and encrypting (or decrypting) a section of text with it is a simple as the following:
 
 ```python
 from pyeznacl import EncryptionPair
@@ -44,10 +48,21 @@ encpair = EncryptionPair()
 status = encpair.encrypt(b'This is some text')
 
 if status.error():
-	print('An error occurred')
+	print('An error occurred while encrypting')
 
-print(f"Encrypted data: {status['data']})")
+encrypted_data = status['data']
+print(f"Encryption type: {status['prefix']}")
+print(f"Encrypted data: {encrypted_data})")
+
+status = encpair.decrypt(encrypted_data)
+if status.error():
+	print('An error occurred while decrypting')
+print(f"Decrypted data: {status['data']}")
 ```
+
+When encrypting, two fields are returned: `prefix`, which describes the type of encryption, and `data`, which holds the Base85-encoded encrypted data.
+
+Two caveats: data encrypted/decrypted must fit within system memory, and the `SecretKey` class should be used for encrypting/decrypting large amounts of data for performance reasons -- asymmetric cryptography is slow.
 
 ## Hashes and Signing
 
