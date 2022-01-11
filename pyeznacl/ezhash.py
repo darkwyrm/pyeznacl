@@ -3,9 +3,10 @@
 import base64
 import hashlib
 
-import blake3
-from pycryptostring import CryptoString
+from blake3 import blake3
 from retval import RetVal, ErrBadValue
+
+from pyeznacl import CryptoString
 
 def blake2hash(data: bytes) -> str:
 	'''Returns a CryptoString-format BLAKE2B-256 hash string of the passed data'''

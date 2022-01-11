@@ -1,3 +1,3 @@
-from . import cryptostring
-from . import encryption
-from . import ezhash
+from .cryptostring import *
+from .encryption import *
+from .ezhash import *

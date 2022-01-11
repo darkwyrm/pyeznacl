@@ -5,16 +5,16 @@ import os
 import re
 
 import jsonschema
-from pyeznacl.cryptostring import CryptoString
-from pyeznacl.ezhash import blake2hash
-from retval import RetVal, ErrBadData, ErrBadValue, ErrBadType, ErrInternalError, ErrExists, \
-	ErrNotFound
-
 import nacl.public
 import nacl.pwhash
 import nacl.secret
 import nacl.signing
 import nacl.utils
+from retval import RetVal, ErrBadData, ErrBadValue, ErrBadType, ErrInternalError, ErrExists, \
+	ErrNotFound
+
+from pyeznacl.cryptostring import CryptoString
+from pyeznacl.ezhash import blake2hash
 
 VerificationError = 'VerificationError'
 DecryptionFailure = 'DecryptionFailure'
@@ -82,7 +82,7 @@ class PublicKey (CryptoKey):
 			return RetVal(ErrBadType, 'bytes expected')
 		
 		try:
-			sealedbox = nacl.public.SealedBox(nacl.public.EncryptionKey(self.public.as_raw()))
+			sealedbox = nacl.public.SealedBox(nacl.public.PublicKey(self.public.as_raw()))
 			encrypted_data = sealedbox.encrypt(data, Base85Encoder).decode()
 		except Exception as e:
 			return RetVal().wrap_exception(e)
@@ -140,7 +140,7 @@ class EncryptionPair (CryptoKey):
 			return RetVal(ErrBadValue, 'path may not be empty')
 		
 		if os.path.exists(path):
-			return RetVal(ErrExists, '%s exists' % path)
+			return RetVal(ErrExists, f'{path} exists')
 
 		outdata = {
 			'PublicKey' : self.get_public_key(),
@@ -165,7 +165,7 @@ class EncryptionPair (CryptoKey):
 			return RetVal(ErrBadType, 'bytes expected')
 		
 		try:
-			sealedbox = nacl.public.SealedBox(nacl.public.EncryptionKey(self.public.as_raw()))
+			sealedbox = nacl.public.SealedBox(nacl.public.PublicKey(self.public.as_raw()))
 			encrypted_data = sealedbox.encrypt(data, Base85Encoder).decode()
 		except Exception as e:
 			return RetVal().wrap_exception(e)
@@ -193,7 +193,7 @@ def load_encryptionpair(path: str) -> RetVal:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
 	if not os.path.exists(path):
-		return RetVal(ErrNotFound, '%s exists' % path)
+		return RetVal(ErrNotFound, f'{path} exists')
 	
 	indata = None
 	try:
@@ -304,7 +304,7 @@ class SigningPair:
 			return RetVal(ErrBadValue, 'path may not be empty')
 		
 		if os.path.exists(path):
-			return RetVal(ErrExists, '%s exists' % path)
+			return RetVal(ErrExists, f'{path} exists')
 
 		outdata = {
 			'VerificationKey' : self.get_public_key(),
@@ -370,7 +370,7 @@ def load_signingpair(path: str) -> RetVal:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
 	if not os.path.exists(path):
-		return RetVal(ErrNotFound, '%s exists' % path)
+		return RetVal(ErrNotFound, f'{path} exists')
 	
 	indata = None
 	try:
@@ -418,6 +418,7 @@ class SecretKey (CryptoKey):
 		return self.get_key()
 
 	def is_valid(self):
+		'''Returns true if the key is valid'''
 		return self.key.is_valid()
 
 	def as_string(self) -> str:
@@ -434,7 +435,7 @@ class SecretKey (CryptoKey):
 			return RetVal(ErrBadValue, 'path may not be empty')
 		
 		if os.path.exists(path):
-			return RetVal(ErrExists, '%s exists' % path)
+			return RetVal(ErrExists, f'{path} exists')
 
 		outdata = {
 			'SecretKey' : self.get_key()
@@ -482,7 +483,7 @@ def load_secretkey(path: str) -> RetVal:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
 	if not os.path.exists(path):
-		return RetVal(ErrNotFound, '%s exists' % path)
+		return RetVal(ErrNotFound, f'{path} exists')
 	
 	indata = None
 	try:
