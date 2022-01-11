@@ -64,7 +64,13 @@ class CryptoKey:
 
 class PublicKey (CryptoKey):
 	'''Represents a public encryption key'''
+
 	def __init__(self, public):
+		'''Creates a new PublicKey instance
+		
+		Parameters:
+		public: a CryptoString containing the public half of the key pair
+		'''
 		super().__init__()
 		if not isinstance(public, CryptoString):
 			raise TypeError
@@ -72,12 +78,18 @@ class PublicKey (CryptoKey):
 		self.pubhash = blake2hash(self.public.data.encode())
 	
 	def as_string(self):
-		'''Returns the key as a string'''
+		'''Returns the key as a CryptoString-formatted string'''
 		return self.public.as_string()
 
 	def encrypt(self, data : bytes) -> RetVal:
-		'''Encrypt the passed data using the public key and return the Base85-encoded data in the 
-		field 'data'.'''
+		'''Encrypt the passed data using the public key.
+		
+		Parameters:
+		data: the data to encrypt
+		
+		Returns:
+		field 'data': the Base85-encoded encrypted data 
+		field 'prefix': the CryptoString prefix for the encrypted data'''
 		if not isinstance(data, bytes):
 			return RetVal(ErrBadType, 'bytes expected')
 		
@@ -92,7 +104,18 @@ class PublicKey (CryptoKey):
 
 class EncryptionPair (CryptoKey):
 	'''Represents an assymmetric encryption key pair'''
+
 	def __init__(self, public=None, private=None):
+		'''Creates a new EncryptionPair instance
+		
+		Parameters:
+		public (optional): a CryptoString containing the public half of the key pair
+		private (optional): a CryptoString containing the private half of the key pair
+
+		Notes:
+		Both the public and private keys are required if supplied. If not supplied, a new keypair 
+		will be generated.
+		'''
 		super().__init__()
 		if public and private:
 			if not (isinstance(public, CryptoString) and isinstance(private, CryptoString)):
@@ -119,23 +142,29 @@ class EncryptionPair (CryptoKey):
 		])
 
 	def get_public_key(self) -> str:
-		'''Returns the public key as a CryptoString string'''
+		'''Returns the public key as a CryptoString-formatted string'''
 		return self.public.as_string()
 	
 	def get_public_hash(self) -> str:
-		'''Returns the hash of the public key as a CryptoString string'''
+		'''Returns the hash of the public key as a CryptoString-formatted string.
+		
+		Notes:
+		The hash is generated from the encoded key, not the raw binary data.'''
 		return self.pubhash
 	
 	def get_private_key(self) -> str:
-		'''Returns the private key as a CryptoString string'''
+		'''Returns the private key as a CryptoString-formatted string'''
 		return self.private.as_string()
 
 	def get_private_hash(self) -> str:
-		'''Returns the hash of the private key as a CryptoString string'''
+		'''Returns the hash of the private key as a CryptoString-formatted string.
+		
+		Notes:
+		The hash is generated from the encoded key, not the raw binary data.'''
 		return self.privhash
 	
 	def save(self, path: str):
-		'''Saves the keypair to a file'''
+		'''Saves the keypair to a JSON-formatted file'''
 		if not path:
 			return RetVal(ErrBadValue, 'path may not be empty')
 		
@@ -159,8 +188,14 @@ class EncryptionPair (CryptoKey):
 		return RetVal()
 
 	def encrypt(self, data : bytes) -> RetVal:
-		'''Encrypt the passed data using the public key and return the Base85-encoded data in the 
-		field 'data'.'''
+		'''Encrypt the passed data using the public key.
+		
+		Parameters:
+		data: the data to encrypt as a byte string
+		
+		Returns:
+		field 'data': The Base85-encoded encrypted data.
+		'''
 		if not isinstance(data, bytes):
 			return RetVal(ErrBadType, 'bytes expected')
 		
@@ -173,8 +208,14 @@ class EncryptionPair (CryptoKey):
 		return RetVal().set_values({'prefix':self.public.prefix, 'data':encrypted_data})
 
 	def decrypt(self, data : str) -> RetVal:
-		'''Decrypt the passed data using the private key and return the raw data in the field 
-		'data'. Base85 decoding of the data is optional, but enabled by default.'''
+		'''Decrypt the passed data using the private key
+		
+		Parameters:
+		data: the Base85-encoded encrypted data
+		
+		Returns:
+		field 'data': the decrypted data
+		'''
 		if not isinstance(data, str):
 			return RetVal(ErrBadType, 'string expected')
 		
@@ -188,7 +229,8 @@ class EncryptionPair (CryptoKey):
 
 
 def load_encryptionpair(path: str) -> RetVal:
-	'''Instantiates a keypair from a file'''
+	'''Instantiates a keypair from a file created with EncryptionPair.save()'''
+
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
@@ -222,8 +264,13 @@ def load_encryptionpair(path: str) -> RetVal:
 
 
 class VerificationKey (CryptoKey):
-	'''Represents a public encryption key'''
+	'''Represents the public half of a signing keypair'''
 	def __init__(self, public):
+		'''Creates a new VerificationKey instance
+		
+		Parameters:
+		public: a CryptoString containing the public half of the key pair
+		'''
 		super().__init__()
 		if not isinstance(public, CryptoString):
 			raise TypeError
@@ -255,6 +302,16 @@ class VerificationKey (CryptoKey):
 class SigningPair:
 	'''Represents an asymmetric signing key pair'''
 	def __init__(self, public=None, private=None):
+		'''Creates a new SigningPair instance
+		
+		Parameters:
+		public (optional): a CryptoString containing the public half of the key pair
+		private (optional): a CryptoString containing the private half of the key pair
+
+		Notes:
+		Both the public and private keys are required if supplied. If not supplied, a new keypair 
+		will be generated.
+		'''
 		super().__init__()
 
 		if public and private:
@@ -282,20 +339,26 @@ class SigningPair:
 			self.private.as_string()
 		])
 
-	def get_public_key(self) -> bytes:
-		'''Returns the verification key as a CryptoString string'''
+	def get_public_key(self) -> str:
+		'''Returns the public key as a CryptoString-formatted string'''
 		return self.public.as_string()
 	
 	def get_public_hash(self) -> str:
-		'''Returns the hash of the verification key as a CryptoString string'''
+		'''Returns the hash of the public key as a CryptoString-formatted string.
+		
+		Notes:
+		The hash is generated from the encoded key, not the raw binary data.'''
 		return self.pubhash
 	
 	def get_private_key(self) -> str:
-		'''Returns the signing key as a CryptoString string'''
+		'''Returns the private key as a CryptoString-formatted string'''
 		return self.private.as_string()
-	
+
 	def get_private_hash(self) -> str:
-		'''Returns the hash of the signing key as a CryptoString string'''
+		'''Returns the hash of the private key as a CryptoString-formatted string.
+		
+		Notes:
+		The hash is generated from the encoded key, not the raw binary data.'''
 		return self.privhash
 	
 	def save(self, path: str) -> RetVal:
@@ -323,7 +386,11 @@ class SigningPair:
 		return RetVal()
 	
 	def sign(self, data : bytes) -> RetVal:
-		'''Return a Base85-encoded signature for the supplied data in the field 'signature'.'''
+		'''Generates a CryptoString-formatted string signature for the supplied data
+		
+		Returns:
+		field 'signature': the generated signature
+		'''
 		if not isinstance(data, bytes):
 			return RetVal(ErrBadType, 'bytes expected for data')
 		
@@ -337,7 +404,16 @@ class SigningPair:
 		return RetVal().set_value('signature', 'ED25519:' + signed.signature.decode())
 	
 	def verify(self, data : bytes, data_signature : CryptoString) -> RetVal:
-		'''Return a Base85-encoded signature for the supplied data in the field 'signature'.'''
+		'''Verifies a signature
+		
+		Parameters:
+		data: a byte string of data to verify
+		data_signature: a CryptoString object containing the signature to verify
+
+		Notes:
+		If the signature does not verify the passed data with the verification key held by the 
+		keypair, VerificationError is returned.
+		'''
 		
 		if not isinstance(data, bytes):
 			return RetVal(ErrBadType, 'bytes expected for data')
@@ -355,7 +431,10 @@ class SigningPair:
 
 
 def signingpair_from_string(keystr : str) -> SigningPair:
-	'''Intantiates a signing pair from a saved seed string that is used for the private key'''
+	'''Intantiates a SigningPair from a saved seed string that is used for the private key.
+	
+	Notes:
+	The seed string must be Base85-encoded.'''
 	
 	key = nacl.signing.SigningKey(base64.b85decode(keystr))
 	return SigningPair(
@@ -365,7 +444,7 @@ def signingpair_from_string(keystr : str) -> SigningPair:
 
 
 def load_signingpair(path: str) -> RetVal:
-	'''Instantiates a signing pair from a file'''
+	'''Instantiates a signing pair from a file saved with SigningPair.save()'''
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
@@ -401,6 +480,15 @@ def load_signingpair(path: str) -> RetVal:
 class SecretKey (CryptoKey):
 	'''Represents a secret key used by symmetric encryption'''
 	def __init__(self, key=None):
+		'''Creates a new SecretKey instance
+		
+		Parameters:
+		key (optional): a CryptoString containing the public half of the key pair
+
+		Notes:
+		If the key parameter is not supplied, a new secret key will be generated from a 
+		cryptographically-secure generator.
+		'''
 		super().__init__()
 		if key:
 			if type(key).__name__ != 'CryptoString':
@@ -422,15 +510,15 @@ class SecretKey (CryptoKey):
 		return self.key.is_valid()
 
 	def as_string(self) -> str:
-		'''Returns the key encoded in base85'''
+		'''Returns the CryptoString-formatted key as a string'''
 		return self.key.as_string()
 	
 	def get_key(self) -> str:
-		'''Returns the key encoded in base85'''
+		'''Returns the CryptoString-formatted key as a string'''
 		return self.key.as_string()
 	
 	def save(self, path: str) -> RetVal:
-		'''Saves the key to a file'''
+		'''Saves the key to a JSON-formatted file'''
 		if not path:
 			return RetVal(ErrBadValue, 'path may not be empty')
 		
@@ -478,7 +566,7 @@ class SecretKey (CryptoKey):
 		
 
 def load_secretkey(path: str) -> RetVal:
-	'''Instantiates a secret key from a file'''
+	'''Instantiates a secret key from a file saved with SecretKey.save()'''
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
@@ -515,6 +603,13 @@ def check_password_complexity(indata: str) -> RetVal:
 	
 	Returns: RetVal
 	strength: string in [very weak', 'weak', 'medium', 'strong']
+
+	Notes:
+	If the strength of the password is too weak, it returns ErrBadValue with the 'strength' field 
+	attached. Passwords are not limited to ASCII; UTF-8 characters are, in fact, encouraged. 
+	Passwords are required to have at least 3 of the following: capital ASCII letters, lowercase 
+	ASCII letters, numbers, symbols, and non-ASCII UTF-8 characters. They must also be a minimum of 
+	8 characters. If 12 characters or greater, a password may have only 2 of the mentioned groups.
 	'''
 	if len(indata) < 8:
 		return RetVal(ErrBadValue, 'Passphrase must be at least 8 characters.') \
@@ -553,6 +648,10 @@ def check_password_complexity(indata: str) -> RetVal:
 class Password:
 	'''Encapsulates hashed password interactions. Uses the Argon2id hashing algorithm.'''
 	def __init__(self, text=''):
+		'''Instantiates a Password object.
+		
+		Parameters:
+		text (optional): a plaintext password'''
 		self.hashtype = 'argon2id'
 		self.strength = ''
 		self.hashstring = ''
@@ -562,8 +661,9 @@ class Password:
 	def set(self, text) -> RetVal:
 		'''
 		Takes the given password text, checks strength, and generates a hash
-		Returns: RetVal
-		On success, field 'strength' is also returned
+		
+		Returns:
+		field 'strength': the strength of the password. Returned only on success.
 		'''
 		status = check_password_complexity(text)
 		if status.error():
@@ -576,15 +676,12 @@ class Password:
 	def assign(self, pwhash) -> RetVal:
 		'''
 		Takes a PHC hash format string and assigns the password object to it.
-		Returns: [dict]
-		error : string
 		'''
 		self.hashstring = pwhash
 		return RetVal()
 	
-	def Check(self, text) -> bool:
-		'''
-		Checks the supplied password against the stored hash.
+	def check(self, text) -> bool:
+		'''Checks the supplied plaintext password against the stored hash.
 		'''
 		return nacl.pwhash.verify(self.hashstring.encode(), text.encode())
 	
