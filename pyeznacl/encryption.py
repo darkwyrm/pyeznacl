@@ -5,6 +5,7 @@ import os
 import re
 
 import jsonschema
+from nacl.exceptions import InvalidkeyError
 import nacl.public
 import nacl.pwhash
 import nacl.secret
@@ -683,7 +684,12 @@ class Password:
 	def check(self, text) -> bool:
 		'''Checks the supplied plaintext password against the stored hash.
 		'''
-		return nacl.pwhash.verify(self.hashstring.encode(), text.encode())
+		try:
+			nacl.pwhash.verify(self.hashstring.encode(), text.encode())
+		except InvalidkeyError:
+			return False
+		
+		return True 
 	
 	def is_valid(self) -> bool:
 		'''Returns true if the internal data is valid. Note that a password may be weak and still 
