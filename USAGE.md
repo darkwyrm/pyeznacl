@@ -64,7 +64,33 @@ When encrypting, two fields are returned: `prefix`, which describes the type of 
 
 Two caveats: data encrypted/decrypted must fit within system memory, and the `SecretKey` class should be used for encrypting/decrypting large amounts of data for performance reasons -- asymmetric cryptography is slow.
 
-## Hashes and Signing
+These classes have other methods for getting the keys themselves, hashes of the encoded versions of the keys and saving them to a JSON file. Separate functions will load keys from these files, as well, such as `load_encryptionpair`.
+
+## Cryptographic Signing
+
+Signing and verifying are just as easy as encryption and decryption. To avoid confusion with encryption keys, the class for verifying with the public half of a signing key pair is called `VerificationKey`. `SigningPair` operates with the same concepts as `EncryptionPair` except using the methods `sign()` and `verify()`. Signatures generated using these classes are returned as `CryptoString` objects.
+
+```python
+from pyeznacl import SigningPair, CryptoString
+
+signpair = SigningPair()
+status = signpair.sign(b'This is some text')
+
+if status.error():
+	print('An error occurred while signing')
+
+signature = CryptoString(status['signature'])
+print(f"Signature type: {signature.prefix}")
+print(f"Signature: {signature.data})")
+
+status = signpair.verify(b'This is some text', signature)
+if status.error():
+	print('An error occurred while verifying')
+else:
+	print('Successfully verified signature')
+```
+
+## Hashes
 
 TODO
 
