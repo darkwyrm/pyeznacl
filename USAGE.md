@@ -102,3 +102,7 @@ print(sha256hash(b'This is some text'))
 ```
 
 Four 256-bit algorithms are provided by the library: BLAKE2B, BLAKE3, SHA2, and SHA3 using the functions `blake2hash()`, `blake3hash()`, `sha256hash()`, and `sha3_256hash()`. `hashfile` is also provided for easy file hashing with large file support.
+
+## Passwords
+
+TODO
