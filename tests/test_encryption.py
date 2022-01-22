@@ -5,10 +5,8 @@ import shutil
 import time
 
 import nacl.signing
-from pycryptostring import CryptoString
-
-# pylint: disable=import-error
-import pymensago.encryption as encryption
+from pyeznacl import CryptoString
+from pyeznacl import encryption
 
 def setup_test(name):
 	'''Creates a test folder hierarchy'''
@@ -34,17 +32,16 @@ def test_encryptionpair_save():
 	public_key = CryptoString("CURVE25519:(B2XX5|<+lOSR>_0mQ=KX4o<aOvXe6M`Z5ldINd`")
 	private_key = CryptoString("CURVE25519:(Rj5)mmd1|YqlLCUP0vE;YZ#o;tJxtlAIzmPD7b&")
 	kp = encryption.EncryptionPair(public_key, private_key)
-
 	keypair_path = os.path.join(test_folder, 'testpair.jk')
-	status = kp.save(keypair_path)
+	status = encryption.save_encryptionpair(kp, keypair_path)
+
 	assert not status.error(), f"Failed to create saved encryption pair file: {status.info()}"
 
-	fhandle = open(keypair_path)
-	filedata = json.load(fhandle)
-	fhandle.close()
+	with open(keypair_path, encoding='utf8') as fhandle:
+		filedata = json.load(fhandle)
 
-	assert filedata['PublicKey'] == public_key.as_string(), "Saved data does not match input data"
-	assert filedata['PrivateKey'] == private_key.as_string(), "Saved data does not match input data"
+	assert filedata['EncryptionKey'] == public_key.as_string(), "Saved data does not match input data"
+	assert filedata['DecryptionKey'] == private_key.as_string(), "Saved data does not match input data"
 
 
 def test_encryptionpair_load():
@@ -56,7 +53,7 @@ def test_encryptionpair_load():
 	kp = encryption.EncryptionPair(public_key, private_key)
 
 	keypair_path = os.path.join(test_folder, 'testpair.jk')
-	status = kp.save(keypair_path)
+	status = encryption.save_encryptionpair(kp, keypair_path)
 	assert not status.error(), f"Failed to create saved encryption pair file: {status.info()}"
 
 	status = encryption.load_encryptionpair(keypair_path)
@@ -94,12 +91,11 @@ def test_signpair_save():
 	sp = encryption.SigningPair(public_key, private_key)
 
 	keypair_path = os.path.join(test_folder, 'testpair.jk')
-	status = sp.save(keypair_path)
+	status = encryption.save_signingpair(sp, keypair_path)
 	assert not status.error(), f"Failed to create saved signing pair file: {status.info()}"
 
-	fhandle = open(keypair_path)
-	filedata = json.load(fhandle)
-	fhandle.close()
+	with open(keypair_path, encoding='utf8') as fhandle:
+		filedata = json.load(fhandle)
 
 	assert filedata['VerificationKey'] == public_key.as_string(), \
 		"Saved data does not match input data"
@@ -115,7 +111,7 @@ def test_signpair_load():
 	kp = encryption.SigningPair(public_key, private_key)
 
 	keypair_path = os.path.join(test_folder, 'testpair.jk')
-	status = kp.save(keypair_path)
+	status = encryption.save_signingpair(kp, keypair_path)
 	assert not status.error(), f"Failed to create saved signing pair file: {status.info()}"
 
 	status = encryption.load_signingpair(keypair_path)
@@ -147,33 +143,13 @@ def test_signpair_sign_verify():
 	assert not vstatus.error(), f"test_signpair_sign_verify: verification failed: {vstatus.info()}"
 
 
-def test_secretkey_save():
-	'''Tests the save code of the SecretKey class'''
-	test_folder = setup_test('encryption_secretkey_save')
-
-	key = CryptoString(r"XSALSA20:J~T^ko3HCFb$1Z7NudpcJA-dzDpF52IF1Oysh+CY")
-	sk = encryption.SecretKey(key)
-
-	key_path = os.path.join(test_folder, 'testkey.jk')
-	status = sk.save(key_path)
-	assert not status.error(), "Failed to create saved encryption pair file"
-
-	fhandle = open(key_path)
-	filedata = json.load(fhandle)
-	fhandle.close()
-
-	assert filedata['SecretKey'] == key.as_string(), "Saved data does not match input data"
-
-
-def test_secretkey_load():
+def test_secretkey_save_load():
 	'''Tests the load code of the SecretKey class'''
 	test_folder = setup_test('encryption_secretkey_load')
 
-	key = CryptoString(r"XSALSA20:J~T^ko3HCFb$1Z7NudpcJA-dzDpF52IF1Oysh+CY")
-	sk = encryption.SecretKey(key)
-
+	sk = encryption.SecretKey(r"XSALSA20:J~T^ko3HCFb$1Z7NudpcJA-dzDpF52IF1Oysh+CY")
 	key_path = os.path.join(test_folder, 'testkey.jk')
-	status = sk.save(key_path)
+	status = encryption.save_secretkey(sk, key_path)
 	assert not status.error(), f"Failed to create saved secret key file: {status.info()}"
 
 	status = encryption.load_secretkey(key_path)
@@ -183,7 +159,7 @@ def test_secretkey_load():
 
 	assert testpair.type == sk.type, "Loaded data does not match input data"
 	assert testpair.enctype == sk.enctype, "Loaded data does not match input data"
-	assert testpair.key == key, "Loaded data does not match input data"
+	assert testpair.key == sk.key, "Loaded data does not match input data"
 
 
 def test_secretkey_encrypt_decrypt():
@@ -205,7 +181,5 @@ if __name__ == '__main__':
 	test_signpair_save()
 	test_signpair_load()
 	test_signpair_sign_verify()
-	test_secretkey_save()
-	test_secretkey_load()
+	test_secretkey_save_load()
 	test_secretkey_encrypt_decrypt()
-

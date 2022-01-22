@@ -203,9 +203,9 @@ class EncryptionPair (CryptoKey):
 		'''Returns the keypair as a dictionary'''
 		return {
 			'EncryptionKey' : self.get_public_key(),
-			'EncryptionHash' : self.pubhash,
+			'EncryptionHash' : self.get_public_hash(),
 			'DecryptionKey' : self.get_private_key(),
-			'DecryptionHash' : self.privhash
+			'DecryptionHash' : self.get_private_hash()
 		}
 
 	def get_public_key(self) -> str:
@@ -280,7 +280,14 @@ class EncryptionPair (CryptoKey):
 
 
 def load_encryptionpair(path: str) -> RetVal:
-	'''Instantiates a keypair from a file created with save_encryptionpair()'''
+	'''Instantiates a keypair from a file created with save_encryptionpair()
+
+	Parameters:
+	path: the path to the file
+
+	Returns:
+	field 'keypair': an EncryptionPair object
+	'''
 
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
@@ -306,8 +313,8 @@ def load_encryptionpair(path: str) -> RetVal:
 	except jsonschema.SchemaError:
 		return RetVal(ErrInternalError, "BUG: invalid EncryptionPair schema")
 
-	public_key = CryptoString(indata['PublicKey'])
-	private_key = CryptoString(indata['PrivateKey'])
+	public_key = CryptoString(indata['EncryptionKey'])
+	private_key = CryptoString(indata['DecryptionKey'])
 	if not public_key.is_valid() or not private_key.is_valid():
 		return RetVal(ErrBadData, 'Failure to base85 decode key data')
 	
@@ -476,9 +483,9 @@ class SigningPair:
 		'''Returns the keypair as a dictionary'''
 		return {
 			'VerificationKey' : self.get_public_key(),
-			'VerificationHash' : self.pubhash,
+			'VerificationHash' : self.get_public_hash(),
 			'SigningKey' : self.get_private_key(),
-			'SigningHash' : self.privhash
+			'SigningHash' : self.get_private_hash()
 		}
 
 	def get_public_key(self) -> str:
@@ -588,7 +595,14 @@ def save_signingpair(key: SigningPair, path: str) -> RetVal:
 	
 
 def load_signingpair(path: str) -> RetVal:
-	'''Instantiates a signing pair from a file saved with save_signingpair()'''
+	'''Instantiates a signing pair from a file saved with save_signingpair()
+	
+	Parameters:
+	path: the path to the file
+
+	Returns:
+	field 'keypair': a SigningPair object
+	'''
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
@@ -641,12 +655,12 @@ class SecretKey (CryptoKey):
 		else:
 			cs = CryptoString()
 			if cs.set(key):
-				self.public = cs
+				self.key = cs
 			else:
-				self.public = CryptoString()
+				self.key = CryptoString()
 
 		if self.key.is_valid():
-			self.enctype = key.prefix
+			self.enctype = self.key.prefix
 		else:
 			self.enctype = 'XSALSA20'
 			self.key = CryptoString('XSALSA20', nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE))
@@ -670,13 +684,17 @@ class SecretKey (CryptoKey):
 		'''Returns the key and hash as a dictionary'''
 		
 		return {
-			'SecretKey': self.key.as_string(),
-			'SecretHash': self.pubhash.as_string()
+			'SecretKey': self.get_key(),
+			'SecretHash': self.get_hash()
 		}
 	
 	def get_key(self) -> str:
 		'''Returns the CryptoString-formatted key as a string'''
 		return self.key.as_string()
+	
+	def get_hash(self) -> str:
+		'''Returns the CryptoString-formatted key as a string'''
+		return self.pubhash.as_string()
 	
 	def decrypt(self, encdata : str) -> RetVal:
 		'''Decrypts the Base85-encoded encrypted data and returns it as bytes. Returns None on 
@@ -705,7 +723,7 @@ class SecretKey (CryptoKey):
 			'data':secretbox.encrypt(data,nonce=mynonce, encoder=Base85Encoder).decode()})
 
 
-def save_secretkey(key: SecretKey(), path: str) -> RetVal:
+def save_secretkey(key: SecretKey, path: str) -> RetVal:
 	'''Saves the key to a JSON-formatted file'''
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
@@ -724,7 +742,14 @@ def save_secretkey(key: SecretKey(), path: str) -> RetVal:
 	
 
 def load_secretkey(path: str) -> RetVal:
-	'''Instantiates a secret key from a file saved with SecretKey.save()'''
+	'''Instantiates a secret key from a file saved with SecretKey.save()
+
+	Parameters:
+	path: the path to the file
+
+	Returns:
+	field 'key': a SecretKey object
+	'''
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
