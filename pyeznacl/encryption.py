@@ -75,17 +75,22 @@ class PublicKey (CryptoKey):
 		CryptoString-formatted string.
 
 		Notes:
-		If given bad 
+		After initializing this object, it is a good idea to check validity with is_valid().
 		'''
 		super().__init__()
 		if isinstance(public, CryptoString):
 			self.public = public
 		else:
 			cs = CryptoString()
-			if not cs.set(public):
-				raise TypeError()
-		
-		self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
+			if cs.set(public):
+				self.public = cs
+			else:
+				self.public = CryptoString()
+
+		if self.public.is_valid():		
+			self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
+		else:
+			self.pubhash = CryptoString()
 	
 	def as_string(self):
 		'''Returns the key as a CryptoString-formatted string'''
