@@ -7,7 +7,7 @@ from blake3 import blake3
 from retval import RetVal, ErrBadValue
 
 def blake2hash(data: bytes) -> str:
-	'''Returns a CryptoString-format BLAKE2B-256 hash string of the passed data'''
+	'''Returns a CryptoString-formatted BLAKE2B-256 hash string of the passed data'''
 	if data is None or data == '':
 		return ''
 	
@@ -17,7 +17,7 @@ def blake2hash(data: bytes) -> str:
 
 
 def blake3hash(data: bytes) -> str:
-	'''Returns a CryptoString-format BLAKE3-256 hash string of the passed data'''
+	'''Returns a CryptoString-formatted BLAKE3-256 hash string of the passed data'''
 	if data is None or data == '':
 		return ''
 	
@@ -27,7 +27,7 @@ def blake3hash(data: bytes) -> str:
 
 
 def sha256hash(data: bytes) -> str:
-	'''Returns a CryptoString-format SHA-256 hash string of the passed data'''
+	'''Returns a CryptoString-formatted SHA-256 hash string of the passed data'''
 	if data is None or data == '':
 		return ''
 	
@@ -37,7 +37,7 @@ def sha256hash(data: bytes) -> str:
 
 
 def sha3_256hash(data: bytes) -> str:
-	'''Returns a CryptoString-format SHA3-256 hash string of the passed data'''
+	'''Returns a CryptoString-formatted SHA3-256 hash string of the passed data'''
 	if data is None or data == '':
 		return ''
 	
@@ -47,8 +47,16 @@ def sha3_256hash(data: bytes) -> str:
 
 
 def hashfile(path: str, algorithm='BLAKE2B-256') -> RetVal:
-	'''Returns a RetVal containing the hash of the passed file in the 'hash' field. The algorithm 
-	used may be specified, but defaults to BLAKE2B-256.'''
+	'''Returns a hash of the passed file in the 'hash' field.
+	
+	Parameters:
+	path: path to the file to hash
+	algorithm: The type of hash to return. Defaults to 'BLAKE2B-256', but also can be 'BLAKE3-256' 
+	'SHA-256', or 'SHA3-256'.
+	
+	Returns:
+	field 'hash': a CryptoString-formatted string of the hash of the file
+	'''
 	if not path:
 		return RetVal(ErrBadValue, 'bad path')
 	
