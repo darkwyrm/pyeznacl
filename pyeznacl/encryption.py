@@ -78,7 +78,8 @@ class PublicKey (CryptoKey):
 		After initializing this object, it is a good idea to check validity with is_valid().
 		'''
 		super().__init__()
-		if isinstance(public, CryptoString):
+		
+		if public and isinstance(public, CryptoString):
 			self.public = public
 		else:
 			cs = CryptoString()
