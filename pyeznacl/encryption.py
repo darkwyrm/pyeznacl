@@ -26,8 +26,8 @@ ErrUnsupportedAlgorithm = 'ErrUnsupportedAlgorithm'
 __encryption_pair_schema = {
 	'type' : 'object',
 	'properties' : {
-		'PublicKey' : { 'type' : 'string' },
-		'PrivateKey' : { 'type' : 'string' },
+		'EncryptionKey' : { 'type' : 'string' },
+		'DecryptionKey' : { 'type' : 'string' },
 	}
 }
 
@@ -202,10 +202,10 @@ class EncryptionPair (CryptoKey):
 	def as_dict(self) -> dict:
 		'''Returns the keypair as a dictionary'''
 		return {
-			'PublicKey' : self.get_public_key(),
-			'PublicHash' : self.pubhash,
-			'PrivateKey' : self.get_private_key(),
-			'PrivateHash' : self.privhash
+			'EncryptionKey' : self.get_public_key(),
+			'EncryptionHash' : self.pubhash,
+			'DecryptionKey' : self.get_private_key(),
+			'DecryptionHash' : self.privhash
 		}
 
 	def get_public_key(self) -> str:
@@ -405,39 +405,81 @@ class SigningPair:
 		'''Creates a new SigningPair instance
 		
 		Parameters:
-		public (optional): a CryptoString containing the public half of the key pair
-		private (optional): a CryptoString containing the private half of the key pair
+		public (optional): a CryptoString object or a CryptoString-formatted string containing the 
+		public half of the key pair.
+		
+		private (optional): a CryptoString object or a CryptoString-formatted string containing the 
+		private half of the key pair.
 
 		Notes:
-		Both the public and private keys are required if supplied. If not supplied, a new keypair 
-		will be generated.
+		Both the public and private keys are required if supplied. If either one (or both) is 
+		missing a new keypair will be generated.
 		'''
 		super().__init__()
 
-		if public and private:
-			if type(public).__name__ != 'CryptoString' or \
-				type(private).__name__ != 'CryptoString':
-				raise TypeError
-			
-			if public.prefix != private.prefix:
-				raise ValueError
-			
-			self.enctype = public.prefix
-			self.public = public
-			self.private = private
-		else:
-			key = nacl.signing.SigningKey.generate()
-			self.enctype = 'ED25519'
-			self.public = CryptoString('ED25519', key.verify_key.encode())
-			self.private = CryptoString('ED25519', key.encode())
-		self.pubhash = blake2hash(self.public.data.encode())
-		self.privhash = blake2hash(self.private.data.encode())
+		self.public = CryptoString()
+		self.private = CryptoString()
+		self.pubhash = CryptoString()
+		self.privhash = CryptoString()
 		
+		if not public or not private:
+			self._generate()
+			return
+		
+		if isinstance(public, CryptoString):
+			pubadapter = public
+		else:
+			pubadapter = CryptoString(public)
+		
+		if not pubadapter.is_valid():
+			self._generate()
+			return
+		
+		if isinstance(private, CryptoString):
+			privadapter = private
+		else:
+			privadapter = CryptoString(private)
+		
+		if not privadapter.is_valid():
+			self._generate()
+			return
+		
+		self.enctype = public.prefix
+		self.public = pubadapter
+		self.private = privadapter
+
+		self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
+		self.privhash = CryptoString(blake2hash(self.private.data.encode()))
+		
+	def _generate(self):
+		'''Resets the EncryptionKey instance to a new keypair'''
+
+		key = nacl.public.PrivateKey.generate()
+		self.enctype = 'CURVE25519'
+		
+		self.public = CryptoString('CURVE25519', key.public_key.encode())
+		self.private = CryptoString('CURVE25519', key.encode())
+		self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
+		self.privhash = CryptoString(blake2hash(self.private.data.encode()))
+
 	def __str__(self):
+		return self.as_string()
+
+	def as_string(self) -> str:
+		'''Returns the keypair as a string'''
 		return ','.join([
 			self.public.as_string(),
 			self.private.as_string()
 		])
+	
+	def as_dict(self) -> dict:
+		'''Returns the keypair as a dictionary'''
+		return {
+			'VerificationKey' : self.get_public_key(),
+			'VerificationHash' : self.pubhash,
+			'SigningKey' : self.get_private_key(),
+			'SigningHash' : self.privhash
+		}
 
 	def get_public_key(self) -> str:
 		'''Returns the public key as a CryptoString-formatted string'''
@@ -448,7 +490,7 @@ class SigningPair:
 		
 		Notes:
 		The hash is generated from the encoded key, not the raw binary data.'''
-		return self.pubhash
+		return self.pubhash.as_string()
 	
 	def get_private_key(self) -> str:
 		'''Returns the private key as a CryptoString-formatted string'''
@@ -459,31 +501,7 @@ class SigningPair:
 		
 		Notes:
 		The hash is generated from the encoded key, not the raw binary data.'''
-		return self.privhash
-	
-	def save(self, path: str) -> RetVal:
-		'''Saves the key to a file'''
-		if not path:
-			return RetVal(ErrBadValue, 'path may not be empty')
-		
-		if os.path.exists(path):
-			return RetVal(ErrExists, f'{path} exists')
-
-		outdata = {
-			'VerificationKey' : self.get_public_key(),
-			'VerificationHash' : self.pubhash,
-			'SigningKey' : self.get_private_key(),
-			'SigningHash' : self.privhash
-		}
-			
-		try:
-			with open(path, 'w', encoding='utf8') as fhandle:
-				json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
-		
-		except Exception as e:
-			return RetVal().wrap_exception(e)
-
-		return RetVal()
+		return self.privhash.as_string()
 	
 	def sign(self, data : bytes) -> RetVal:
 		'''Generates a CryptoString-formatted string signature for the supplied data
@@ -529,6 +547,14 @@ class SigningPair:
 		
 		return RetVal()
 
+	def is_valid(self) -> bool:
+		'''Returns true if the object contains valid data'''
+		if self.public and self.public.is_valid() and self.pubhash and self.pubhash.is_valid() and \
+			self.public.prefix == self.private.prefix:
+			return True
+		
+		return False
+
 
 def signingpair_from_string(keystr : str) -> SigningPair:
 	'''Intantiates a SigningPair from a saved seed string that is used for the private key.
@@ -543,8 +569,26 @@ def signingpair_from_string(keystr : str) -> SigningPair:
 	)
 
 
+def save_signingpair(key: SigningPair, path: str) -> RetVal:
+	'''Saves a signing keypair to a JSON-formatted file'''
+	if not path:
+		return RetVal(ErrBadValue, 'path may not be empty')
+	
+	if os.path.exists(path):
+		return RetVal(ErrExists, f'{path} exists')
+
+	try:
+		with open(path, 'w', encoding='utf8') as fhandle:
+			json.dump(key.as_dict(), fhandle, ensure_ascii=False, indent=1)
+	
+	except Exception as e:
+		return RetVal().wrap_exception(e)
+
+	return RetVal()
+	
+
 def load_signingpair(path: str) -> RetVal:
-	'''Instantiates a signing pair from a file saved with SigningPair.save()'''
+	'''Instantiates a signing pair from a file saved with save_signingpair()'''
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
 	
