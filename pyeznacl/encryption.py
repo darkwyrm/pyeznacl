@@ -132,37 +132,81 @@ class EncryptionPair (CryptoKey):
 		'''Creates a new EncryptionPair instance
 		
 		Parameters:
-		public (optional): a CryptoString containing the public half of the key pair
-		private (optional): a CryptoString containing the private half of the key pair
+		public (optional): a CryptoString object or a CryptoString-formatted string containing the 
+		public half of the key pair.
+		
+		private (optional): a CryptoString object or a CryptoString-formatted string containing the 
+		private half of the key pair.
 
 		Notes:
-		Both the public and private keys are required if supplied. If not supplied, a new keypair 
-		will be generated.
+		Both the public and private keys are required if supplied. If either one (or both) is 
+		missing a new keypair will be generated.
 		'''
 		super().__init__()
-		if public and private:
-			if not (isinstance(public, CryptoString) and isinstance(private, CryptoString)):
-				raise TypeError
-			
-			if public.prefix != private.prefix:
-				raise ValueError
-			
-			self.enctype = public.prefix
-			self.public = public
-			self.private = private
+
+		self.public = CryptoString()
+		self.private = CryptoString()
+		self.pubhash = CryptoString()
+		self.privhash = CryptoString()
+		
+		if not public or not private:
+			self._generate()
+			return
+		
+		if isinstance(public, CryptoString):
+			pubadapter = public
 		else:
-			key = nacl.public.PrivateKey.generate()
-			self.enctype = 'CURVE25519'
-			self.public = CryptoString('CURVE25519', key.public_key.encode())
-			self.private = CryptoString('CURVE25519', key.encode())
-		self.pubhash = blake2hash(self.public.data.encode())
-		self.privhash = blake2hash(self.private.data.encode())
+			pubadapter = CryptoString(public)
+		
+		if not pubadapter.is_valid():
+			self._generate()
+			return
+		
+		if isinstance(private, CryptoString):
+			privadapter = private
+		else:
+			privadapter = CryptoString(private)
+		
+		if not privadapter.is_valid():
+			self._generate()
+			return
+		
+		self.enctype = public.prefix
+		self.public = pubadapter
+		self.private = privadapter
+
+		self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
+		self.privhash = CryptoString(blake2hash(self.private.data.encode()))
+
+	def _generate(self):
+		'''Resets the EncryptionKey instance to a new keypair'''
+
+		key = nacl.public.PrivateKey.generate()
+		self.enctype = 'CURVE25519'
+		
+		self.public = CryptoString('CURVE25519', key.public_key.encode())
+		self.private = CryptoString('CURVE25519', key.encode())
+		self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
+		self.privhash = CryptoString(blake2hash(self.private.data.encode()))
 
 	def __str__(self):
+		return self.as_string()
+
+	def as_string(self) -> str:
+		'''Returns the keypair as a string'''
 		return ','.join([
 			self.public.as_string(),
 			self.private.as_string()
 		])
+	
+	def as_dict(self) -> dict:
+		'''Returns the keypair as a dictionary'''
+		return {
+			'PublicKey' : self.get_public_key(),
+			'PublicHash' : self.pubhash,
+			'PrivateKey' : self.get_private_key(),
+			'PrivateHash' : self.privhash
+		}
 
 	def get_public_key(self) -> str:
 		'''Returns the public key as a CryptoString-formatted string'''
@@ -173,7 +217,7 @@ class EncryptionPair (CryptoKey):
 		
 		Notes:
 		The hash is generated from the encoded key, not the raw binary data.'''
-		return self.pubhash
+		return self.pubhash.as_string()
 	
 	def get_private_key(self) -> str:
 		'''Returns the private key as a CryptoString-formatted string'''
@@ -184,32 +228,8 @@ class EncryptionPair (CryptoKey):
 		
 		Notes:
 		The hash is generated from the encoded key, not the raw binary data.'''
-		return self.privhash
+		return self.privhash.as_string()
 	
-	def save(self, path: str):
-		'''Saves the keypair to a JSON-formatted file'''
-		if not path:
-			return RetVal(ErrBadValue, 'path may not be empty')
-		
-		if os.path.exists(path):
-			return RetVal(ErrExists, f'{path} exists')
-
-		outdata = {
-			'PublicKey' : self.get_public_key(),
-			'PublicHash' : self.pubhash,
-			'PrivateKey' : self.get_private_key(),
-			'PrivateHash' : self.privhash
-		}
-			
-		try:
-			with open(path, 'w', encoding='utf8') as fhandle:
-				json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
-		
-		except Exception as e:
-			return RetVal().wrap_exception(e)
-
-		return RetVal()
-
 	def encrypt(self, data : bytes) -> RetVal:
 		'''Encrypt the passed data using the public key.
 		
@@ -250,9 +270,17 @@ class EncryptionPair (CryptoKey):
 		
 		return RetVal().set_value('data', decrypted_data.decode())
 
+	def is_valid(self) -> bool:
+		'''Returns true if the object contains valid data'''
+		if self.public and self.public.is_valid() and self.pubhash and self.pubhash.is_valid() and \
+			self.public.prefix == self.private.prefix:
+			return True
+		
+		return False
+
 
 def load_encryptionpair(path: str) -> RetVal:
-	'''Instantiates a keypair from a file created with EncryptionPair.save()'''
+	'''Instantiates a keypair from a file created with save_encryptionpair()'''
 
 	if not path:
 		return RetVal(ErrBadValue, 'path may not be empty')
@@ -284,6 +312,24 @@ def load_encryptionpair(path: str) -> RetVal:
 		return RetVal(ErrBadData, 'Failure to base85 decode key data')
 	
 	return RetVal().set_value('keypair', EncryptionPair(public_key, private_key))
+
+
+def save_encryptionpair(key: EncryptionPair, path: str):
+	'''Saves a keypair to a JSON-formatted file'''
+	if not path:
+		return RetVal(ErrBadValue, 'path may not be empty')
+	
+	if os.path.exists(path):
+		return RetVal(ErrExists, f'{path} exists')
+
+	try:
+		with open(path, 'w', encoding='utf8') as fhandle:
+			json.dump(key.as_dict(), fhandle, ensure_ascii=False, indent=1)
+	
+	except Exception as e:
+		return RetVal().wrap_exception(e)
+
+	return RetVal()
 
 
 class VerificationKey (CryptoKey):
