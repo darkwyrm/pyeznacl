@@ -556,7 +556,7 @@ class SigningPair:
 		return False
 
 
-def signingpair_from_string(keystr : str) -> SigningPair:
+def signingpair_from_string(keystr: str) -> SigningPair:
 	'''Intantiates a SigningPair from a saved seed string that is used for the private key.
 	
 	Notes:
@@ -627,23 +627,32 @@ class SecretKey (CryptoKey):
 		'''Creates a new SecretKey instance
 		
 		Parameters:
-		key (optional): a CryptoString containing the public half of the key pair
+		key (optional): a CryptoString instance or a CryptoString-formatted string containing the 
+		secret key
 
 		Notes:
-		If the key parameter is not supplied, a new secret key will be generated from a 
-		cryptographically-secure generator.
+		If the key parameter is not supplied or is invalid, a new secret key will be generated from 
+		a cryptographically-secure source.
 		'''
 		super().__init__()
-		if key:
-			if type(key).__name__ != 'CryptoString':
-				raise TypeError
-			self.enctype = key.prefix
+
+		if key and isinstance(key, CryptoString):
 			self.key = key
+		else:
+			cs = CryptoString()
+			if cs.set(key):
+				self.public = cs
+			else:
+				self.public = CryptoString()
+
+		if self.key.is_valid():
+			self.enctype = key.prefix
 		else:
 			self.enctype = 'XSALSA20'
 			self.key = CryptoString('XSALSA20', nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE))
-		
-		self.privhash = blake2hash(self.key.data.encode())
+
+		# This silliness is just for CryptoKey compatibility		
+		self.privhash = CryptoString(blake2hash(self.key.data.encode()))
 		self.pubhash = self.privhash
 
 	def __str__(self):
@@ -651,36 +660,23 @@ class SecretKey (CryptoKey):
 
 	def is_valid(self):
 		'''Returns true if the key is valid'''
-		return self.key.is_valid()
+		return self.key.is_valid() and self.pubhash.is_valid()
 
 	def as_string(self) -> str:
 		'''Returns the CryptoString-formatted key as a string'''
 		return self.key.as_string()
 	
+	def as_dict(self) -> dict:
+		'''Returns the key and hash as a dictionary'''
+		
+		return {
+			'SecretKey': self.key.as_string(),
+			'SecretHash': self.pubhash.as_string()
+		}
+	
 	def get_key(self) -> str:
 		'''Returns the CryptoString-formatted key as a string'''
 		return self.key.as_string()
-	
-	def save(self, path: str) -> RetVal:
-		'''Saves the key to a JSON-formatted file'''
-		if not path:
-			return RetVal(ErrBadValue, 'path may not be empty')
-		
-		if os.path.exists(path):
-			return RetVal(ErrExists, f'{path} exists')
-
-		outdata = {
-			'SecretKey' : self.get_key()
-		}
-
-		try:
-			with open(path, 'w', encoding='utf8') as fhandle:
-				json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
-		
-		except Exception as e:
-			return RetVal().wrap_exception(e)
-
-		return RetVal()
 	
 	def decrypt(self, encdata : str) -> RetVal:
 		'''Decrypts the Base85-encoded encrypted data and returns it as bytes. Returns None on 
@@ -707,7 +703,25 @@ class SecretKey (CryptoKey):
 		mynonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE)
 		return RetVal().set_values({ 'prefix':'XSALSA20',
 			'data':secretbox.encrypt(data,nonce=mynonce, encoder=Base85Encoder).decode()})
-		
+
+
+def save_secretkey(key: SecretKey(), path: str) -> RetVal:
+	'''Saves the key to a JSON-formatted file'''
+	if not path:
+		return RetVal(ErrBadValue, 'path may not be empty')
+	
+	if os.path.exists(path):
+		return RetVal(ErrExists, f'{path} exists')
+
+	try:
+		with open(path, 'w', encoding='utf8') as fhandle:
+			json.dump(key.as_dict(), fhandle, ensure_ascii=False, indent=1)
+	
+	except Exception as e:
+		return RetVal().wrap_exception(e)
+
+	return RetVal()
+	
 
 def load_secretkey(path: str) -> RetVal:
 	'''Instantiates a secret key from a file saved with SecretKey.save()'''
