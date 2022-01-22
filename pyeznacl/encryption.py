@@ -760,7 +760,7 @@ def check_password_complexity(indata: str) -> RetVal:
 	'''Checks the requested string as meeting the needed security standards.
 	
 	Returns: RetVal
-	strength: string in [very weak', 'weak', 'medium', 'strong']
+	field 'strength': string in [very weak', 'weak', 'medium', 'strong']
 
 	Notes:
 	If the strength of the password is too weak, it returns ErrBadValue with the 'strength' field 
@@ -800,11 +800,12 @@ def check_password_complexity(indata: str) -> RetVal:
 		status = RetVal(ErrBadValue, 'passphrase too weak')
 		status.set_value('strength', strength_strings[strength_score])
 		return status
+	
 	return RetVal().set_value('strength', strength_strings[strength_score])
 
 
 class Password:
-	'''Encapsulates hashed password interactions. Uses the Argon2id hashing algorithm.'''
+	'''Encapsulates hashed password interactions using the Argon2id hashing algorithm.'''
 	def __init__(self, text=''):
 		'''Instantiates a Password object.
 		
@@ -831,15 +832,19 @@ class Password:
 		
 		return status
 	
-	def assign(self, pwhash) -> RetVal:
-		'''
-		Takes a PHC hash format string and assigns the password object to it.
-		'''
+	def assign(self, pwhash: str) -> RetVal:
+		'''Takes a PHC hash format string and assigns the password object to it.'''
+		
+		# TODO: Verify the PHC format
+		
 		self.hashstring = pwhash
 		return RetVal()
 	
 	def check(self, text) -> bool:
 		'''Checks the supplied plaintext password against the stored hash.
+
+		Returns:
+		True if the password matches the internal hash
 		'''
 		try:
 			nacl.pwhash.verify(self.hashstring.encode(), text.encode())
@@ -849,8 +854,10 @@ class Password:
 		return True 
 	
 	def is_valid(self) -> bool:
-		'''Returns true if the internal data is valid. Note that a password may be weak and still 
-		valid.'''
+		'''Returns true if the internal data is valid.
+		
+		Notes:
+		A password may be weak and still valid.'''
 		return self.strength and self.hashstring
 
 
