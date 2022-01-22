@@ -3,6 +3,7 @@ import base64
 import json
 import os
 import re
+from typing import Union
 
 import jsonschema
 from nacl.exceptions import InvalidkeyError
@@ -66,17 +67,25 @@ class CryptoKey:
 class PublicKey (CryptoKey):
 	'''Represents a public encryption key'''
 
-	def __init__(self, public):
+	def __init__(self, public: Union[CryptoString, str]):
 		'''Creates a new PublicKey instance
 		
 		Parameters:
-		public: a CryptoString containing the public half of the key pair
+		public: the public half of an asymmetric key pair. It can be a CryptoString object or a 
+		CryptoString-formatted string.
+
+		Notes:
+		If given bad 
 		'''
 		super().__init__()
-		if not isinstance(public, CryptoString):
-			raise TypeError
-		self.public = public
-		self.pubhash = blake2hash(self.public.data.encode())
+		if isinstance(public, CryptoString):
+			self.public = public
+		else:
+			cs = CryptoString()
+			if not cs.set(public):
+				raise TypeError()
+		
+		self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
 	
 	def as_string(self):
 		'''Returns the key as a CryptoString-formatted string'''
@@ -101,6 +110,13 @@ class PublicKey (CryptoKey):
 			return RetVal().wrap_exception(e)
 		
 		return RetVal().set_values({'prefix':self.public.prefix, 'data':encrypted_data})
+	
+	def is_valid(self) -> bool:
+		'''Returns true if the object contains valid data'''
+		if self.public and self.public.is_valid() and self.pubhash and self.pubhash.is_valid():
+			return True
+		
+		return False
 
 
 class EncryptionPair (CryptoKey):
