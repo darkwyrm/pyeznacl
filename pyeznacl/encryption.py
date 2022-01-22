@@ -338,21 +338,45 @@ class VerificationKey (CryptoKey):
 		'''Creates a new VerificationKey instance
 		
 		Parameters:
-		public: a CryptoString containing the public half of the key pair
+		public: the public half of an signing key pair. It can be a CryptoString object or a 
+		CryptoString-formatted string.
+
+		Notes:
+		After initializing this object, it is a good idea to check validity with is_valid().
 		'''
 		super().__init__()
-		if not isinstance(public, CryptoString):
-			raise TypeError
-		self.public = public
-		self.pubhash = blake2hash(self.public.data.encode())
+		
+		if public and isinstance(public, CryptoString):
+			self.public = public
+		else:
+			cs = CryptoString()
+			if cs.set(public):
+				self.public = cs
+			else:
+				self.public = CryptoString()
 
+		if self.public.is_valid():		
+			self.pubhash = CryptoString(blake2hash(self.public.data.encode()))
+		else:
+			self.pubhash = CryptoString()
+	
 	def as_string(self):
 		'''Returns the key as a string'''
 		return self.public.as_string()
 
-	def verify(self, data : bytes, data_signature : CryptoString) -> RetVal:
-		'''Return a Base85-encoded signature for the supplied data in the field 'signature'.'''
+	def verify(self, data: bytes, data_signature: CryptoString) -> RetVal:
+		'''Verifies a signature with the passed data.
 		
+		Parameters:
+		data: the data to verify against the signature
+		data_signature: the signature to verify. Unlike most calls this parameter must be a
+		CryptoString instance.
+
+		Returns:
+		Errors only. VerificationError is returned if the signature fails to verify the data 
+		using this verification key.
+		'''
+
 		if not isinstance(data, bytes):
 			return RetVal(ErrBadType, 'bytes expected for data')
 		if not isinstance(data_signature, CryptoString):
@@ -366,6 +390,13 @@ class VerificationKey (CryptoKey):
 			return RetVal(VerificationError, e)
 		
 		return RetVal()
+	
+	def is_valid(self) -> bool:
+		'''Returns true if the object contains valid data'''
+		if self.public and self.public.is_valid() and self.pubhash and self.pubhash.is_valid():
+			return True
+		
+		return False
 
 
 class SigningPair:
