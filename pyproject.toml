@@ -7,7 +7,7 @@ name = "pyeznacl"
 version = "1.0.0"
 description = "A wrapper around PyNaCl to make it even easier to use"
 readme = "README.md"
-requires-python = ">=3.5"
+requires-python = ">=3.6"
 license = {file = "LICENSE"}
 authors = [
 	{name = "Jon Yoder", email = "jon@yoder.cloud"},
