@@ -159,7 +159,7 @@ class EncryptionPair (CryptoKey):
 		self.privhash = blake2hash(self.private.data.encode())
 
 	def __str__(self):
-		return '\n'.join([
+		return ','.join([
 			self.public.as_string(),
 			self.private.as_string()
 		])
@@ -357,7 +357,7 @@ class SigningPair:
 		self.privhash = blake2hash(self.private.data.encode())
 		
 	def __str__(self):
-		return '\n'.join([
+		return ','.join([
 			self.public.as_string(),
 			self.private.as_string()
 		])
